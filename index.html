@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SkyChat Diamond Ultimate</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap');
+        :root { --primary: #3b82f6; --bg-default: #0f172a; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: var(--bg-default); color: white; height: 100dvh; margin: 0; overflow: hidden; }
+        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 28px; }
+        .msg-bubble { border-radius: 18px; padding: 12px 16px; max-width: 80%; margin-bottom: 8px; position: relative; }
+        .me { background: linear-gradient(135deg, #3b82f6, #1d4ed8); align-self: flex-end; border-bottom-right-radius: 4px; }
+        .other { background: rgba(255, 255, 255, 0.1); align-self: flex-start; border-bottom-left-radius: 4px; }
+        .premium-glow { border: 1px solid rgba(255, 215, 0, 0.3); box-shadow: 0 0 15px rgba(255, 215, 0, 0.1); }
+        input, select { background: rgba(0,0,0,0.3) !important; border: 1px solid rgba(255,255,255,0.1) !important; color: white; outline: none; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body class="flex items-center justify-center p-2">
+
+    <div id="auth-screen" class="glass p-8 w-full max-w-sm text-center shadow-2xl overflow-y-auto max-h-[95vh]">
+        <h1 class="text-4xl font-800 mb-6 text-blue-500">SkyChat</h1>
+        
+        <div class="flex gap-2 mb-6 bg-white/5 p-1 rounded-xl">
+            <button onclick="switchAuthMode('email')" class="flex-1 py-2 rounded-lg text-[10px] font-bold uppercase">E-Mail</button>
+            <button onclick="switchAuthMode('phone')" class="flex-1 py-2 rounded-lg text-[10px] font-bold uppercase">Telefon</button>
+        </div>
+
+        <div id="email-auth-box" class="space-y-3">
+            <input id="email" type="email" placeholder="E-Mail" class="w-full p-4 rounded-xl">
+            <input id="password" type="password" placeholder="Passwort" class="w-full p-4 rounded-xl">
+            <button id="login-email-btn" class="w-full bg-blue-600 py-4 rounded-2xl font-bold">Starten</button>
+        </div>
+
+        <div id="phone-auth-box" class="hidden space-y-3">
+            <input id="phone-number" type="text" placeholder="+49 123 456789" class="w-full p-4 rounded-xl">
+            <div id="recaptcha-container"></div>
+            <button id="send-sms-btn" class="w-full bg-blue-600 py-4 rounded-2xl font-bold">SMS Code senden</button>
+            
+            <div id="verify-box" class="hidden mt-4 space-y-3">
+                <input id="sms-code" type="text" placeholder="6-stelliger Code" class="w-full p-4 rounded-xl">
+                <button id="verify-sms-btn" class="w-full bg-green-600 py-4 rounded-2xl font-bold">Code bestätigen</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="app-screen" class="hidden glass w-full max-w-6xl h-full flex overflow-hidden border border-white/5">
+        
+        <div class="hidden md:flex w-72 flex-col p-6 bg-black/20 border-r border-white/5">
+            <h2 class="font-800 text-2xl mb-6 tracking-tighter">SkyChat</h2>
+            <div class="flex-grow overflow-y-auto space-y-2">
+                <input id="search-input" type="text" placeholder="Nutzer E-Mail (Enter)..." class="w-full text-xs p-3 rounded-xl mb-4">
+                <div id="my-rooms" class="space-y-1"></div>
+            </div>
+            <div class="mt-4 pt-4 border-t border-white/10">
+                <button onclick="toggleModal('account-modal')" class="w-full bg-white/5 py-3 rounded-xl text-xs font-bold">👤 MEIN KONTO</button>
+            </div>
+        </div>
+
+        <div class="flex-grow flex flex-col min-w-0">
+            <div id="chat-header" class="p-4 bg-white/[0.02] border-b border-white/5 flex items-center justify-between cursor-pointer">
+                <div class="flex items-center truncate">
+                    <div id="h-avatar" class="w-10 h-10 bg-blue-500/20 rounded-xl flex items-center justify-center font-bold mr-3 text-blue-400">#</div>
+                    <h2 id="h-title" class="font-bold truncate">Chat wählen</h2>
+                </div>
+                <div id="lock-icon" class="hidden text-yellow-500">🔒</div>
+            </div>
+            
+            <div id="messages-container" class="flex-grow overflow-y-auto p-4 flex flex-col"></div>
+
+            <div class="p-4 flex gap-2">
+                <input id="msg-input" type="text" placeholder="Nachricht..." class="flex-grow p-4 rounded-2xl">
+                <button id="send-btn" class="bg-blue-600 px-6 rounded-2xl font-bold">SEND</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="account-modal" class="hidden fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-50 p-4">
+        <div class="glass p-8 w-full max-w-md">
+            <h3 class="text-xl font-bold mb-4">Profil & Upgrade</h3>
+            <div class="space-y-4">
+                <input id="display-name" type="text" placeholder="Anzeigename" class="w-full p-3 rounded-xl">
+                
+                <div class="p-4 bg-blue-500/10 rounded-xl border border-blue-500/20">
+                    <p class="text-[10px] font-bold text-blue-400 mb-2 uppercase">Admin / Premium Code</p>
+                    <div class="flex gap-2">
+                        <input id="premium-code" type="password" placeholder="Code" class="flex-grow p-2 rounded-lg text-xs">
+                        <button id="apply-code-btn" class="bg-blue-600 px-3 rounded-lg text-xs">OK</button>
+                    </div>
+                </div>
+
+                <div id="premium-settings" class="hidden space-y-3 pt-4 border-t border-white/10">
+                    <p class="text-yellow-500 text-[10px] font-bold">DIAMOND FEATURES</p>
+                    <input id="bg-color" type="color" class="w-full h-10 rounded-lg bg-transparent">
+                </div>
+
+                <button id="save-acc-btn" class="w-full bg-blue-600 py-3 rounded-xl font-bold">Speichern</button>
+                <button id="logout-btn" class="w-full text-red-500 text-xs mt-2">Abmelden</button>
+                <button onclick="toggleModal('account-modal')" class="w-full text-xs opacity-50 mt-2">Schließen</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, RecaptchaVerifier, signInWithPhoneNumber } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, query, where, onSnapshot, serverTimestamp, doc, getDoc, updateDoc, setDoc, arrayUnion, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAh2LCnBPXqhhj8Gst0VdG2FrKUpMJ4DQk", authDomain: "chatroom-241f9.firebaseapp.com", projectId: "chatroom-241f9", storageBucket: "chatroom-241f9.firebasestorage.app", messagingSenderId: "20602857470", appId: "1:20602857470:web:248ed6d8e12219e335c2af"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let uData = null, curRid = null, unsub = null, confirmationResult = null;
+
+        // AUTH MODE SWITCHER
+        window.switchAuthMode = (mode) => {
+            document.getElementById('email-auth-box').classList.toggle('hidden', mode !== 'email');
+            document.getElementById('phone-auth-box').classList.toggle('hidden', mode !== 'phone');
+        };
+
+        // PHONE LOGIN
+        const initRecaptcha = () => {
+            if(!window.recaptchaVerifier) {
+                window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', { 'size': 'invisible' });
+            }
+        };
+
+        document.getElementById('send-sms-btn').onclick = async () => {
+            initRecaptcha();
+            const phone = document.getElementById('phone-number').value;
+            try {
+                confirmationResult = await signInWithPhoneNumber(auth, phone, window.recaptchaVerifier);
+                document.getElementById('verify-box').classList.remove('hidden');
+                alert("SMS gesendet!");
+            } catch (e) { alert(e.message); }
+        };
+
+        document.getElementById('verify-sms-btn').onclick = async () => {
+            const code = document.getElementById('sms-code').value;
+            try {
+                await confirmationResult.confirm(code);
+            } catch (e) { alert("Code falsch!"); }
+        };
+
+        // APP LOGIC
+        onAuthStateChanged(auth, async (u) => {
+            if (u) {
+                const ref = doc(db, "users", u.uid);
+                let snap = await getDoc(ref);
+                if (!snap.exists()) {
+                    await setDoc(ref, { email: u.email || u.phoneNumber, rooms: ["global"], isPremium: false, displayName: (u.email || u.phoneNumber).split('@')[0] });
+                    snap = await getDoc(ref);
+                }
+                uData = { uid: u.uid, ...snap.data() };
+                if(uData.isPremium) {
+                    document.getElementById('premium-settings').classList.remove('hidden');
+                    if(uData.bgColor) document.body.style.backgroundColor = uData.bgColor;
+                }
+                document.getElementById('display-name').value = uData.displayName;
+                document.getElementById('auth-screen').classList.add('hidden');
+                document.getElementById('app-screen').classList.remove('hidden');
+                loadRooms();
+            } else {
+                document.getElementById('auth-screen').classList.remove('hidden');
+                document.getElementById('app-screen').classList.add('hidden');
+            }
+        });
+
+        const loadRooms = () => {
+            onSnapshot(doc(db, "users", uData.uid), async (s) => {
+                const list = document.getElementById('my-rooms'); list.innerHTML = "";
+                const rids = s.data()?.rooms || ["global"];
+                for (let id of rids) {
+                    const rS = await getDoc(doc(db, "rooms", id));
+                    const name = id === "global" ? "Globaler Chat" : (rS.data()?.name || "Chat");
+                    const div = document.createElement('div');
+                    div.className = `p-4 rounded-2xl cursor-pointer mb-1 transition ${id === curRid ? 'bg-blue-600' : 'bg-white/5 hover:bg-white/10'}`;
+                    div.innerHTML = `<span class="text-sm font-bold">${name}</span>`;
+                    div.onclick = () => switchRoom(id, name);
+                    list.appendChild(div);
+                }
+            });
+        };
+
+        const switchRoom = (id, name) => {
+            curRid = id;
+            document.getElementById('h-title').innerText = name;
+            if (unsub) unsub();
+            const q = query(collection(db, "messages"), where("roomId", "==", id));
+            unsub = onSnapshot(q, (s) => {
+                const cont = document.getElementById('messages-container'); cont.innerHTML = "";
+                let msgs = []; s.forEach(d => msgs.push(d.data()));
+                msgs.sort((a,b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
+                msgs.forEach(m => {
+                    const div = document.createElement('div');
+                    div.className = `msg-bubble ${m.senderId === uData.uid ? 'me' : 'other'}`;
+                    div.innerHTML = `<p class="text-[9px] opacity-40 font-bold mb-1">${m.senderName}</p><p class="text-sm">${m.text}</p>`;
+                    cont.appendChild(div);
+                });
+                cont.scrollTop = cont.scrollHeight;
+            });
+        };
+
+        // ADMIN CODE CHECK
+        document.getElementById('apply-code-btn').onclick = async () => {
+            const code = document.getElementById('premium-code').value;
+            const codeRef = doc(db, "secret_codes", code);
+            const snap = await getDoc(codeRef);
+            if(snap.exists()) {
+                await updateDoc(doc(db, "users", uData.uid), { isPremium: true });
+                if(snap.data().singleUse) await deleteDoc(codeRef);
+                alert("Erfolg! Diamond Status aktiv.");
+                location.reload();
+            } else alert("Ungültiger Code.");
+        };
+
+        // SEARCH & 4-CHAT LIMIT
+        document.getElementById('search-input').onkeypress = async (e) => {
+            if(e.key === 'Enter') {
+                const mail = e.target.value.trim();
+                if(!uData.isPremium && uData.rooms.length >= 5) return alert("Limit erreicht (Max 4 Chats)!");
+                const q = query(collection(db, "users"), where("email", "==", mail));
+                const snap = await getDocs(q);
+                if(!snap.empty) {
+                    const target = snap.docs[0];
+                    const dmId = [uData.uid, target.id].sort().join("_");
+                    await setDoc(doc(db, "rooms", dmId), { name: "Chat: " + mail }, {merge:true});
+                    await updateDoc(doc(db, "users", uData.uid), { rooms: arrayUnion(dmId) });
+                    await updateDoc(doc(db, "users", target.id), { rooms: arrayUnion(dmId) });
+                    e.target.value = "";
+                } else alert("Nicht gefunden.");
+            }
+        };
+
+        document.getElementById('send-btn').onclick = async () => {
+            const i = document.getElementById('msg-input');
+            if(!i.value || !curRid) return;
+            await addDoc(collection(db, "messages"), {
+                text: i.value, roomId: curRid, senderId: uData.uid,
+                senderName: uData.displayName, createdAt: serverTimestamp()
+            });
+            i.value = "";
+        };
+
+        document.getElementById('save-acc-btn').onclick = async () => {
+            await updateDoc(doc(db, "users", uData.uid), { 
+                displayName: document.getElementById('display-name').value,
+                bgColor: document.getElementById('bg-color').value
+            });
+            location.reload();
+        };
+
+        document.getElementById('login-email-btn').onclick = async () => {
+            const e = document.getElementById('email').value, p = document.getElementById('password').value;
+            try { await signInWithEmailAndPassword(auth, e, p); } catch {
+                try { await createUserWithEmailAndPassword(auth, e, p); } catch (err) { alert(err.message); }
+            }
+        };
+
+        document.getElementById('logout-btn').onclick = () => signOut(auth);
+        window.toggleModal = (id) => document.getElementById(id).classList.toggle('hidden');
+    </script>
+</body>
+</html>
